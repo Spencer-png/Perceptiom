@@ -35,6 +35,26 @@
 <body>
     <div id="root"></div>
 
+    <!-- Firebase Configuration -->
+    <!-- IMPORTANT: Replace these placeholder values with your actual Firebase project configuration -->
+    <script>
+        // Firebase configuration - Replace with your actual Firebase config
+        window.__firebase_config = JSON.stringify({
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        });
+        
+        // App ID - Replace with your actual app ID
+        window.__app_id = "YOUR_APP_ID";
+        
+        // Initial auth token (optional) - Replace with your actual token if needed
+        // window.__initial_auth_token = "YOUR_INITIAL_AUTH_TOKEN";
+    </script>
+
     <!-- Load React and ReactDOM from CDN -->
     <!-- These scripts create global `React` and `ReactDOM` objects -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -45,3 +65,4 @@
     <script type="module" src="./chatbot.js"></script>
 </body>
 </html>
+
