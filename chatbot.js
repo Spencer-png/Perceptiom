@@ -27,7 +27,7 @@ const App = () => {
 
     // Initialize Firebase and handle authentication
     useEffect(() => {
-        // **FIX**: Check for Firebase config existence and validity
+        // Check for Firebase config existence and validity
         if (typeof __firebase_config === 'undefined') {
             setFirebaseError("Firebase configuration is missing. The application cannot start.");
             return;
@@ -98,7 +98,7 @@ const App = () => {
         });
 
         return () => unsubscribe();
-    }, [isAuthReady, db, userId, firebaseError]); // Added firebaseError to dependency array
+    }, [isAuthReady, db, userId, firebaseError]);
 
 
     // Fetch messages for the current session
@@ -262,7 +262,7 @@ const App = () => {
         return icons[name] || React.createElement("span", { className: className }, name);
     };
 
-    // **FIX**: Render an error message if Firebase fails to initialize
+    // Render an error message if Firebase fails to initialize
     if (firebaseError) {
         return (
             React.createElement("div", { className: "flex h-screen bg-red-900 text-white items-center justify-center p-4" },
