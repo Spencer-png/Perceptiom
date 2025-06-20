@@ -17,7 +17,8 @@ const App = () => {
     const [chatSessions, setChatSessions] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
     const messagesEndRef = useRef(null);
-    const [isAuthReady, setIsAuthReady] = useState(false); // New state to track auth readiness
+    const [isAuthReady, setIsAuthReady] = useState(false);
+    const [firebaseError, setFirebaseError] = useState(null); // State for Firebase errors
 
     // Scroll to the latest message whenever messages update
     useEffect(() => {
@@ -26,8 +27,19 @@ const App = () => {
 
     // Initialize Firebase and handle authentication
     useEffect(() => {
+        // **FIX**: Check for Firebase config existence and validity
+        if (typeof __firebase_config === 'undefined') {
+            setFirebaseError("Firebase configuration is missing. The application cannot start.");
+            return;
+        }
+
         try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const firebaseConfig = JSON.parse(__firebase_config);
+            if (!firebaseConfig.projectId) {
+                setFirebaseError("Firebase configuration is invalid: 'projectId' is missing.");
+                return;
+            }
+
             const app = initializeApp(firebaseConfig);
             const firestoreDb = getFirestore(app);
             const firebaseAuth = getAuth(app);
@@ -40,7 +52,6 @@ const App = () => {
                 if (user) {
                     setUserId(user.uid);
                 } else {
-                    // Sign in anonymously if no token is provided
                     try {
                         if (typeof __initial_auth_token !== 'undefined') {
                             await signInWithCustomToken(firebaseAuth, __initial_auth_token);
@@ -49,27 +60,25 @@ const App = () => {
                         }
                     } catch (error) {
                         console.error("Firebase Auth Error:", error);
+                        setFirebaseError("Failed to authenticate with Firebase.");
                     }
                 }
-                setIsAuthReady(true); // Set auth ready once initial check is done
+                setIsAuthReady(true);
             });
 
-            return () => unsubscribe(); // Cleanup auth listener on unmount
+            return () => unsubscribe();
         } catch (error) {
             console.error("Failed to initialize Firebase:", error);
+            setFirebaseError(`Failed to initialize Firebase: ${error.message}`);
         }
     }, []);
 
     // Fetch chat sessions when auth is ready and userId is available
     useEffect(() => {
-        if (!isAuthReady || !db || !userId) return;
+        if (!isAuthReady || !db || !userId || firebaseError) return;
 
-        // Use a variable for the app ID to avoid issues if it's not defined
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
         const chatSessionsRef = collection(db, `artifacts/${appId}/users/${userId}/chatSessions`);
-        // Note: Using orderBy can cause Firestore errors if the corresponding index is not created.
-        // For this app, we'll assume the index exists or will be created.
         const q = query(chatSessionsRef, orderBy('updatedAt', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -79,11 +88,9 @@ const App = () => {
             }));
             setChatSessions(sessions);
 
-            // If no current session is selected, select the most recent one or create a new one.
-            // This logic runs only when the sessions list updates.
             if (!currentSessionId && sessions.length > 0) {
                 setCurrentSessionId(sessions[0].id);
-            } else if (sessions.length === 0) { // If there are no sessions, create one.
+            } else if (sessions.length === 0) {
                 createNewChatSession();
             }
         }, (error) => {
@@ -91,14 +98,13 @@ const App = () => {
         });
 
         return () => unsubscribe();
-        // **FIX**: Removed currentSessionId from dependency array to prevent an infinite loop.
-    }, [isAuthReady, db, userId]);
+    }, [isAuthReady, db, userId, firebaseError]); // Added firebaseError to dependency array
 
 
     // Fetch messages for the current session
     useEffect(() => {
-        if (!isAuthReady || !db || !userId || !currentSessionId) {
-            setMessages([]); // Clear messages if no session selected or not ready
+        if (!isAuthReady || !db || !userId || !currentSessionId || firebaseError) {
+            setMessages([]);
             return;
         }
 
@@ -107,7 +113,6 @@ const App = () => {
         const unsubscribe = onSnapshot(sessionDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // Ensure messages is always an array
                 setMessages(Array.isArray(data.messages) ? data.messages : []);
             } else {
                 setMessages([]);
@@ -118,7 +123,7 @@ const App = () => {
         });
 
         return () => unsubscribe();
-    }, [isAuthReady, db, userId, currentSessionId]);
+    }, [isAuthReady, db, userId, currentSessionId, firebaseError]);
 
     // Create a new chat session
     const createNewChatSession = async () => {
@@ -128,13 +133,13 @@ const App = () => {
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             const newSessionRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/chatSessions`), {
-                title: `New Chat ${new Date().toLocaleDateString()}`, // Default title
+                title: `New Chat ${new Date().toLocaleDateString()}`,
                 messages: [],
                 createdAt: new Date(),
                 updatedAt: new Date()
             });
             setCurrentSessionId(newSessionRef.id);
-            setMessages([]); // Clear messages for the new session
+            setMessages([]);
         } catch (error) {
             console.error("Error creating new chat session:", error);
         } finally {
@@ -142,30 +147,24 @@ const App = () => {
         }
     };
 
-    // Helper function to render message content, including code blocks
+    // Helper function to render message content
     const renderMessageContent = (text) => {
-        // This regex looks for code blocks: ```[language]\ncode\n```
         const parts = text.split(/(```(?:[a-zA-Z0-9]+)?\n[\s\S]*?\n```)/g);
-
         return parts.map((part, i) => {
             if (part.startsWith('```')) {
-                // Extract the code content
                 const codeContent = part.replace(/```(?:[a-zA-Z0-9]+)?\n|```/g, '');
                 return (
                     React.createElement("pre", { key: i, className: "bg-gray-800 p-3 rounded-md overflow-x-auto text-sm font-mono my-2 text-gray-200" },
                         React.createElement("code", null, codeContent)
                     )
                 );
-            } else {
-                // Render regular text
-                return React.createElement("p", { key: i, className: "mb-1 last:mb-0" }, part);
             }
+            return React.createElement("p", { key: i, className: "mb-1 last:mb-0" }, part);
         });
     };
 
     // This function simulates fetching documentation content.
     const simulateFetchPerceptionDocContent = () => {
-        // In a real application, you would fetch this content dynamically.
         return `
             ## Perception.cx API Documentation Summary
             **Core Functions (engine):**
@@ -187,7 +186,6 @@ const App = () => {
 
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            // Update the current session in Firestore
             const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
             await updateDoc(sessionDocRef, {
                 messages: updatedMessages,
@@ -199,7 +197,6 @@ const App = () => {
                 parts: [{ text: msg.text }]
             }));
             
-            // Add system prompt and context for the model
             const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. Your responses must be based on the provided documentation context. If a question is outside this scope, politely decline.`;
             const perceptionDocContent = simulateFetchPerceptionDocContent();
             
@@ -210,7 +207,6 @@ const App = () => {
             ];
 
             const payload = { contents };
-
             const apiKey = ""; // The environment will provide the key
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -266,6 +262,18 @@ const App = () => {
         return icons[name] || React.createElement("span", { className: className }, name);
     };
 
+    // **FIX**: Render an error message if Firebase fails to initialize
+    if (firebaseError) {
+        return (
+            React.createElement("div", { className: "flex h-screen bg-red-900 text-white items-center justify-center p-4" },
+                React.createElement("div", { className: "text-center" },
+                    React.createElement("h1", { className: "text-2xl font-bold mb-2" }, "Application Error"),
+                    React.createElement("p", { className: "font-mono bg-red-800 p-2 rounded" }, firebaseError)
+                )
+            )
+        );
+    }
+    
     const renderUserId = () => {
         if (!isAuthReady) {
             return React.createElement("div", { className: "text-sm text-gray-400" }, "Auth Initializing...");
