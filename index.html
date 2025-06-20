@@ -36,22 +36,12 @@
     <div id="root"></div>
 
     <!-- Load React and ReactDOM from CDN -->
-    <!-- Note: In a production environment, you'd typically bundle React with your app
-         using a tool like Webpack/Vite for better performance and smaller file sizes.
-         For GitHub Pages and simple deployments, CDN is convenient. -->
+    <!-- These scripts create global `React` and `ReactDOM` objects -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
     <!-- Your React application script -->
-    <!-- The type="module" is important for using modern JavaScript imports/exports -->
+    <!-- We now only need this single module script. It will define the component and render it. -->
     <script type="module" src="./chatbot.js"></script>
-    <script type="module">
-        // This is necessary to render your React App component onto the DOM.
-        // It assumes your chatbot.js exports a default component named 'App'.
-        import App from './chatbot.js';
-        const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
-        root.render(React.createElement(App));
-    </script>
 </body>
 </html>
