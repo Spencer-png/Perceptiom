@@ -1,7 +1,5 @@
-// Remove the direct React import. Assume React is globally available from index.html.
-// import { useState, useEffect, useRef } from 'https://unpkg.com/react@18/umd/react.development.js';
-const { useState, useEffect, useRef } = React; // Destructure directly from global React
-
+import React, { useState, useEffect, useRef } from 'https://unpkg.com/react@18/umd/react.development.js';
+import { createRoot } from 'https://unpkg.com/react-dom@18/umd/react-dom.development.js'; // Import createRoot if it's explicitly needed in index.html, though usually not directly in app.js
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, getDoc, updateDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
@@ -16,9 +14,8 @@ const App = () => {
     const [userId, setUserId] = useState(null);
     const [chatSessions, setChatSessions] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false); // New state to track auth readiness
-
     const messagesEndRef = useRef(null);
+    const [isAuthReady, setIsAuthReady] = useState(false); // New state to track auth readiness
 
     // Scroll to the latest message whenever messages update
     useEffect(() => {
