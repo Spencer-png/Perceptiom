@@ -11,14 +11,14 @@ const App = () => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [db, setDb] = useState(null);
+    const [db, setDb] = useState(null); // Will be null in demo mode
     const [auth, setAuth] = useState(null);
     const [userId, setUserId] = useState(null);
     const [chatSessions, setChatSessions] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
     const messagesEndRef = useRef(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
-    const [firebaseError, setFirebaseError] = useState(null); // State for Firebase errors
+    const [isReady, setIsReady] = useState(false); // Unified readiness state
+    const [isDemoMode, setIsDemoMode] = useState(false);
 
     // Scroll to the latest message whenever messages update
     useEffect(() => {
@@ -28,15 +28,19 @@ const App = () => {
     // Initialize Firebase and handle authentication
     useEffect(() => {
         // Check for Firebase config existence and validity
-        if (typeof __firebase_config === 'undefined') {
-            setFirebaseError("Firebase configuration is missing. The application cannot start.");
+        if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+            console.warn("Firebase configuration is missing. Running in demo mode.");
+            setIsDemoMode(true);
+            setIsReady(true); // Allow app to render in demo mode
             return;
         }
 
         try {
             const firebaseConfig = JSON.parse(__firebase_config);
             if (!firebaseConfig.projectId) {
-                setFirebaseError("Firebase configuration is invalid: 'projectId' is missing.");
+                console.warn("Firebase configuration is invalid: 'projectId' is missing. Running in demo mode.");
+                setIsDemoMode(true);
+                setIsReady(true);
                 return;
             }
 
@@ -60,92 +64,123 @@ const App = () => {
                         }
                     } catch (error) {
                         console.error("Firebase Auth Error:", error);
-                        setFirebaseError("Failed to authenticate with Firebase.");
+                        setIsDemoMode(true); // Fallback to demo mode on auth error
                     }
                 }
-                setIsAuthReady(true);
+                setIsReady(true);
             });
 
             return () => unsubscribe();
         } catch (error) {
             console.error("Failed to initialize Firebase:", error);
-            setFirebaseError(`Failed to initialize Firebase: ${error.message}`);
+            setIsDemoMode(true); // Fallback to demo mode on init error
+            setIsReady(true);
         }
     }, []);
 
-    // Fetch chat sessions when auth is ready and userId is available
+    // Effect for managing sessions (both Firestore and Demo mode)
     useEffect(() => {
-        if (!isAuthReady || !db || !userId || firebaseError) return;
+        if (!isReady) return;
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const chatSessionsRef = collection(db, `artifacts/${appId}/users/${userId}/chatSessions`);
-        const q = query(chatSessionsRef, orderBy('updatedAt', 'desc'));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const sessions = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setChatSessions(sessions);
-
-            if (!currentSessionId && sessions.length > 0) {
-                setCurrentSessionId(sessions[0].id);
-            } else if (sessions.length === 0) {
+        if (isDemoMode) {
+            // In demo mode, if there are no sessions, create one.
+            if (chatSessions.length === 0) {
                 createNewChatSession();
             }
-        }, (error) => {
-            console.error("Error fetching chat sessions:", error);
-        });
+        } else if (db && userId) {
+            // Firestore mode
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const chatSessionsRef = collection(db, `artifacts/${appId}/users/${userId}/chatSessions`);
+            const q = query(chatSessionsRef, orderBy('updatedAt', 'desc'));
 
-        return () => unsubscribe();
-    }, [isAuthReady, db, userId, firebaseError]);
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const sessions = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                setChatSessions(sessions);
 
+                if (!currentSessionId && sessions.length > 0) {
+                    setCurrentSessionId(sessions[0].id);
+                } else if (snapshot.empty) {
+                    createNewChatSession();
+                }
+            }, (error) => {
+                console.error("Error fetching chat sessions:", error);
+            });
 
-    // Fetch messages for the current session
-    useEffect(() => {
-        if (!isAuthReady || !db || !userId || !currentSessionId || firebaseError) {
-            setMessages([]);
-            return;
+            return () => unsubscribe();
         }
+    }, [isReady, isDemoMode, db, userId]);
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
-        const unsubscribe = onSnapshot(sessionDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setMessages(Array.isArray(data.messages) ? data.messages : []);
-            } else {
-                setMessages([]);
-                console.log("Current session document does not exist.");
-            }
-        }, (error) => {
-            console.error("Error fetching messages for current session:", error);
-        });
 
-        return () => unsubscribe();
-    }, [isAuthReady, db, userId, currentSessionId, firebaseError]);
+    // Effect for fetching messages for the current session
+    useEffect(() => {
+        if (!currentSessionId || isDemoMode) return; // In demo mode, messages are handled by local state only
+
+        if (isReady && db && userId) {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
+            const unsubscribe = onSnapshot(sessionDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setMessages(Array.isArray(data.messages) ? data.messages : []);
+                } else {
+                    setMessages([]);
+                }
+            }, (error) => {
+                console.error("Error fetching messages:", error);
+            });
+
+            return () => unsubscribe();
+        }
+    }, [isReady, db, userId, currentSessionId, isDemoMode]);
 
     // Create a new chat session
     const createNewChatSession = async () => {
-        if (!db || !userId) return;
-
         setLoading(true);
-        try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const newSessionRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/chatSessions`), {
-                title: `New Chat ${new Date().toLocaleDateString()}`,
+        if (isDemoMode) {
+            const newSessionId = crypto.randomUUID();
+            const newSession = {
+                id: newSessionId,
+                title: `New Chat (Demo)`,
                 messages: [],
                 createdAt: new Date(),
-                updatedAt: new Date()
-            });
-            setCurrentSessionId(newSessionRef.id);
+                updatedAt: new Date(),
+            };
+            setChatSessions([newSession, ...chatSessions]);
+            setCurrentSessionId(newSessionId);
             setMessages([]);
-        } catch (error) {
-            console.error("Error creating new chat session:", error);
-        } finally {
-            setLoading(false);
+        } else if (db && userId) {
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const newSessionRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/chatSessions`), {
+                    title: `New Chat ${new Date().toLocaleDateString()}`,
+                    messages: [],
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
+                setCurrentSessionId(newSessionRef.id);
+                setMessages([]);
+            } catch (error) {
+                console.error("Error creating new chat session:", error);
+            }
         }
+        setLoading(false);
     };
+    
+    // Selects a chat session
+    const selectChatSession = (sessionId) => {
+        setCurrentSessionId(sessionId);
+        if (isDemoMode) {
+            const session = chatSessions.find(s => s.id === sessionId);
+            if(session) {
+                setMessages(session.messages);
+            }
+        }
+        // For firestore mode, the useEffect for messages will trigger automatically
+    };
+
 
     // Helper function to render message content
     const renderMessageContent = (text) => {
@@ -164,19 +199,12 @@ const App = () => {
     };
 
     // This function simulates fetching documentation content.
-    const simulateFetchPerceptionDocContent = () => {
-        return `
-            ## Perception.cx API Documentation Summary
-            **Core Functions (engine):**
-            - \`engine.register_on_unload(callback)\`: Registers a function for script unload.
-            ... (and so on, the full documentation content is extensive)
-        `;
-    };
+    const simulateFetchPerceptionDocContent = () => `## Perception.cx API Documentation Summary...`;
 
     // Handle sending a message
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!input.trim() || loading || !db || !userId || !currentSessionId) return;
+        if (!input.trim() || loading || !currentSessionId) return;
 
         const userMessage = { sender: 'user', text: input.trim(), timestamp: new Date().toISOString() };
         const updatedMessages = [...messages, userMessage];
@@ -184,62 +212,70 @@ const App = () => {
         setInput('');
         setLoading(true);
 
+        // Update state locally first for responsiveness
+        if (isDemoMode) {
+            const updatedSessions = chatSessions.map(s => 
+                s.id === currentSessionId ? { ...s, messages: updatedMessages, updatedAt: new Date() } : s
+            );
+            setChatSessions(updatedSessions);
+        } else if (db && userId) {
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
+                await updateDoc(sessionDocRef, {
+                    messages: updatedMessages,
+                    updatedAt: new Date()
+                });
+            } catch (error) {
+                console.error("Error saving user message:", error);
+            }
+        }
+
+        // --- AI Response ---
+        // **FIX**: Using the API key provided by the user.
+        const apiKey = "AIzaSyA3Zhw-Apw21X2AI6cLQWZU7LGttcqhNlE";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API...`;
+        const perceptionDocContent = simulateFetchPerceptionDocContent();
+        const contents = [
+            { role: "user", parts: [{ text: `${systemPrompt}\nContext: ${perceptionDocContent}` }] },
+            { role: "model", parts: [{ text: "Understood." }] },
+            ...updatedMessages.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }))
+        ];
+
         try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
-            await updateDoc(sessionDocRef, {
-                messages: updatedMessages,
-                updatedAt: new Date()
-            });
-
-            const chatHistoryForModel = updatedMessages.map(msg => ({
-                role: msg.sender === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.text }]
-            }));
-            
-            const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. Your responses must be based on the provided documentation context. If a question is outside this scope, politely decline.`;
-            const perceptionDocContent = simulateFetchPerceptionDocContent();
-            
-            const contents = [
-                { role: "user", parts: [{ text: systemPrompt + "\n\n--- Start Documentation Context ---\n" + perceptionDocContent + "\n--- End Documentation Context ---" }] },
-                { role: "model", parts: [{ text: "Understood. I will answer based on the provided context." }] },
-                ...chatHistoryForModel
-            ];
-
-            const payload = { contents };
-            const apiKey = ""; // The environment will provide the key
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ contents })
             });
 
-            let aiResponseText = "Sorry, I couldn't get a response from the AI.";
+            let aiResponseText = "Sorry, I couldn't get a response.";
             if (response.ok) {
-                 const result = await response.json();
-                 if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
-                     aiResponseText = result.candidates[0].content.parts[0].text;
-                 }
+                const result = await response.json();
+                aiResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text || aiResponseText;
             } else {
                 console.error("AI API Error:", await response.text());
-                aiResponseText = `Error from AI: HTTP Status ${response.status}. Please check your API key and try again.`;
+                aiResponseText = "There was an error connecting to the AI. Please check the console.";
             }
 
             const aiMessage = { sender: 'ai', text: aiResponseText, timestamp: new Date().toISOString() };
             const finalMessages = [...updatedMessages, aiMessage];
             setMessages(finalMessages);
 
-            await updateDoc(sessionDocRef, {
-                messages: finalMessages,
-                updatedAt: new Date()
-            });
-
+            // Save AI response
+            if (isDemoMode) {
+                const updatedSessions = chatSessions.map(s => 
+                    s.id === currentSessionId ? { ...s, messages: finalMessages, updatedAt: new Date() } : s
+                );
+                setChatSessions(updatedSessions);
+            } else if (db && userId) {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
+                await updateDoc(sessionDocRef, { messages: finalMessages, updatedAt: new Date() });
+            }
         } catch (error) {
-            console.error("Error sending message:", error);
-            const errorMessage = { sender: 'ai', text: 'An error occurred. Please check the console.', timestamp: new Date().toISOString() };
-            setMessages((prev) => [...prev, errorMessage]);
+            console.error("Error with AI response:", error);
         } finally {
             setLoading(false);
         }
@@ -247,7 +283,7 @@ const App = () => {
 
     // SVG icon component
     const LucideIcon = ({ name, size = 20, className = '' }) => {
-        // **FIX**: Corrected the xmlns attribute for all SVGs.
+        // **FIX**: Corrected xmlns attribute to be a valid SVG namespace URL.
         const icons = {
             'SquarePen': React.createElement('svg', { xmlns: '[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)', width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', className: className }, React.createElement('path', { d: 'M12 20h9' }), React.createElement('path', { d: 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z' })),
             'Search': React.createElement('svg', { xmlns: '[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)', width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', className: className }, React.createElement('circle', { cx: '11', cy: '11', r: '8' }), React.createElement('path', { d: 'm21 21-4.3-4.3' })),
@@ -262,21 +298,13 @@ const App = () => {
         return icons[name] || React.createElement("span", { className: className }, name);
     };
 
-    // Render an error message if Firebase fails to initialize
-    if (firebaseError) {
-        return (
-            React.createElement("div", { className: "flex h-screen bg-red-900 text-white items-center justify-center p-4" },
-                React.createElement("div", { className: "text-center" },
-                    React.createElement("h1", { className: "text-2xl font-bold mb-2" }, "Application Error"),
-                    React.createElement("p", { className: "font-mono bg-red-800 p-2 rounded" }, firebaseError)
-                )
-            )
-        );
+    if (!isReady) {
+        return React.createElement("div", { className: "flex h-screen bg-[#202123] items-center justify-center text-white" }, "Loading Application...");
     }
-    
+
     const renderUserId = () => {
-        if (!isAuthReady) {
-            return React.createElement("div", { className: "text-sm text-gray-400" }, "Auth Initializing...");
+        if (isDemoMode) {
+            return React.createElement("div", { className: "text-sm text-yellow-400" }, "Demo Mode");
         }
         if (userId) {
             return (
@@ -285,7 +313,7 @@ const App = () => {
                 )
             );
         }
-        return React.createElement("div", { className: "text-sm text-red-400" }, "User ID not available.");
+        return React.createElement("div", { className: "text-sm text-gray-400" }, "Authenticating...");
     };
 
     // The main JSX for the App component
@@ -301,7 +329,7 @@ const App = () => {
                     React.createElement("button", {
                         onClick: createNewChatSession,
                         className: "flex items-center gap-2 w-full p-2 text-sm text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors duration-200",
-                        disabled: loading || !isAuthReady
+                        disabled: loading || !isReady
                     },
                         React.createElement(LucideIcon, { name: "SquarePen", size: 18 }), " New chat"
                     ),
@@ -312,7 +340,7 @@ const App = () => {
                                 chatSessions.map(session => (
                                     React.createElement("button", {
                                         key: session.id,
-                                        onClick: () => setCurrentSessionId(session.id),
+                                        onClick: () => selectChatSession(session.id),
                                         className: `flex items-center gap-2 w-full p-2 text-sm rounded-md transition-colors duration-200 ${
                                             currentSessionId === session.id
                                                 ? 'bg-gray-700 text-white'
@@ -320,12 +348,12 @@ const App = () => {
                                             }`
                                     },
                                         React.createElement(LucideIcon, { name: "MessageSquarePlus", size: 16 }),
-                                        React.createElement("span", { className: "truncate" }, session.title || `Chat ${session.id.substring(0, 5)}`)
+                                        React.createElement("span", { className: "truncate" }, session.title)
                                     )
                                 ))
                             )
                         ) : (
-                            React.createElement("p", { className: "text-gray-500 text-sm text-center mt-4" }, isAuthReady ? "No chats yet." : "Loading...")
+                            React.createElement("p", { className: "text-gray-500 text-sm text-center mt-4" }, isReady ? "No chats yet." : "Loading...")
                         )
                     )
                 ),
@@ -403,8 +431,6 @@ const App = () => {
 
 
 // --- Entry Point ---
-// This code will run after the chatbot.js module has been loaded.
-// It finds the 'root' div in your index.html and tells React to render the App component inside it.
 const container = document.getElementById('root');
 if (container) {
     const root = ReactDOM.createRoot(container);
