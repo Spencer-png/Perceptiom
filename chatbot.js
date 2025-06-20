@@ -1,4 +1,4 @@
-// Removed direct import for React and ReactDOM, relying on them being global from index.html
+// React's UMD build makes React available globally, so no explicit import is needed here.
 const { useState, useEffect, useRef } = React; // Destructure directly from global React
 
 // Firebase imports remain as modules from CDN
@@ -293,7 +293,7 @@ const App = () => {
             - Fields: \`.x\`, \`.y\`, (\`.z\` for vec3/4), (\`.w\` for vec4).
             - Methods (common for all, with dimension-specific variations): \`:length()\`, \`:length_squared()\`, \`:normalize()\`, \`:dot(v)\`, \`:distance(v)\`, \`:clone()\`, \`:lerp(v, t)\`.
             - Specific: \`vec2:perpendicular()\`, \`vec2:angle()\`, \`vec2:rotate(radians)\`, \`vec3:cross(v)\`, \`vec3:angle_between(v)\`.
-            - Memory Access: \`vecX.read_float(address)\`, \`vecX.write_float(address, v)\` (and double versions).
+            - Memory Access: `vecX.read_float(address)`, `vecX.write_float(address, v)` (and double versions).
 
             **Matrix (mat4):**
             - Constructor: \`mat4()\` (identity matrix).
