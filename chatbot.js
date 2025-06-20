@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'https://unpkg.com/react@18/umd/react.development.js';
-import { createRoot } from 'https://unpkg.com/react-dom@18/umd/react-dom.development.js'; // Import createRoot if it's explicitly needed in index.html, though usually not directly in app.js
+// Removed direct import for React and ReactDOM, relying on them being global from index.html
+const { useState, useEffect, useRef } = React; // Destructure directly from global React
+
+// Firebase imports remain as modules from CDN
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, getDoc, updateDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
@@ -332,7 +334,7 @@ const App = () => {
 
             ### 2. Process Interaction and Memory Reading:
             - **Attaching to a Game:** Scripts begin by attaching to the target game process, e.g., \`proc.attach_by_name("DayZ_x64.exe")\` or \`proc.attach_by_name("RustClient.exe")\`. They check \`proc.is_attached()\` and \`proc.base_address()\` to ensure a successful attachment.
-            - **Reading Game Data:** Extensive use of \`proc.read_int64\`, \`proc.read_float\`, \`proc.read_string\`, and vector type-specific 'read_float'/'read_double' methods (e.g., \`vec2.read_float\`, \`vec3.read_float\`, \`vec4.read_float\`, etc.) to access game-specific pointers, values (health, position), and strings from the attached process's memory.
+            - **Reading Game Data:** Extensive use of \`proc.read_int64\`, \`proc.read_float\`, \`proc.read_string\`, and vector type-specific 'read_float'/'read_double' methods (e.g., \`vec2.read_float\`, \`vec3.read_float\`, \`vec4.read_float\`, etc.) to access game-specific pointers, values (health, position), and strings from the attached process'ss memory.
             - **Memory Structures and Offsets:** Scripts define tables of hexadecimal offsets (e.g., \`gameOffsets\`, \`OFFSETS\`) to navigate complex in-game data structures (World, Camera, PlayerList, EntityList, specific player properties, bone arrays). They often chain reads through pointers.
             - **Error Handling for Memory Reads:** Common pattern to check for \`nil\` or \`0\` return values from memory read functions (e.g., \`if (address == nil or address == 0) then goto skipEntity; end;\`) to prevent crashes.
 
