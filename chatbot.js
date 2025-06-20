@@ -190,8 +190,8 @@ const App = () => {
             if (part.startsWith('```')) {
                 const codeContent = part.replace(/```(?:[a-zA-Z0-9]+)?\n|```/g, '');
                 return (
-                    React.createElement("div", { key: i, className: "bg-gray-800 p-0 rounded-md overflow-hidden my-2" },
-                        React.createElement("div", { className: "flex items-center justify-between px-3 py-2 bg-gray-700 text-gray-300 text-xs font-semibold" },
+                    React.createElement("div", { key: i, className: "code-block" },
+                        React.createElement("div", { className: "code-header" },
                             React.createElement("span", { className: "flex items-center" },
                                 React.createElement(LucideIcon, { name: "Code", size: 14, className: "mr-1" }),
                                 "Lua Code Example"
@@ -201,7 +201,7 @@ const App = () => {
                                 "Copy"
                             )
                         ),
-                        React.createElement("pre", { className: "p-3 overflow-x-auto text-sm font-mono text-gray-200" },
+                        React.createElement("pre", { className: "code-content" },
                             React.createElement("code", null, codeContent)
                         )
                     )
