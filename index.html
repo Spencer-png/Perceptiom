@@ -8,61 +8,201 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Optional: Add Google Fonts - Inter is a good choice for modern UIs -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            overflow: hidden; /* Prevent body scroll, React app manages its own scroll */
-        }
-        /* Custom scrollbar for better aesthetics */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #2d2d31; /* Darker track color */
-            border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #555; /* Thumb color */
-            border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #777; /* Darker thumb on hover */
-        }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <!-- Firebase Configuration -->
-    <!-- IMPORTANT: Replace these placeholder values with your actual Firebase project configuration -->
+    
+    <!-- Firebase configuration -->
     <script>
-        // Firebase configuration - Replace with your actual Firebase config
-        window.__firebase_config = JSON.stringify({
+        // Replace these with your actual Firebase configuration values
+        const __firebase_config = JSON.stringify({
             apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
             projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
             appId: "YOUR_APP_ID"
         });
         
-        // App ID - Replace with your actual app ID
-        window.__app_id = "YOUR_APP_ID";
+        // Replace with your actual app ID
+        const __app_id = "YOUR_APP_ID";
         
-        // Initial auth token (optional) - Replace with your actual token if needed
-        // window.__initial_auth_token = "YOUR_INITIAL_AUTH_TOKEN";
+        // Optional: Replace with your initial auth token if you have one
+        const __initial_auth_token = "YOUR_INITIAL_AUTH_TOKEN";
     </script>
-
-    <!-- Load React and ReactDOM from CDN -->
-    <!-- These scripts create global `React` and `ReactDOM` objects -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
-    <!-- Your React application script -->
-    <!-- We now only need this single module script. It will define the component and render it. -->
-    <script type="module" src="./chatbot.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* ChatGPT-like styling */
+        .chatgpt-sidebar {
+            background: #171717;
+            border-right: 1px solid #2d2d2d;
+        }
+        
+        .chatgpt-main {
+            background: #212121;
+        }
+        
+        .chatgpt-input-area {
+            background: #2f2f2f;
+            border: 1px solid #4d4d4d;
+            border-radius: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .chatgpt-input-area:focus-within {
+            border-color: #10a37f;
+            box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
+        }
+        
+        .chatgpt-message-user {
+            background: #2f2f2f;
+            border-radius: 18px;
+        }
+        
+        .chatgpt-message-ai {
+            background: transparent;
+        }
+        
+        .chatgpt-button-primary {
+            background: #10a37f;
+            transition: background-color 0.2s;
+        }
+        
+        .chatgpt-button-primary:hover {
+            background: #0d8f6b;
+        }
+        
+        .chatgpt-button-primary:disabled {
+            background: #4d4d4d !important;
+            cursor: not-allowed !important;
+        }
+        
+        .chatgpt-sidebar-item {
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .chatgpt-sidebar-item:hover {
+            background: #2d2d2d;
+        }
+        
+        .chatgpt-sidebar-item.active {
+            background: #2d2d2d;
+        }
+        
+        /* Auto-resize textarea */
+        .auto-resize-textarea {
+            resize: none;
+            overflow: hidden;
+            min-height: 24px;
+            max-height: 200px;
+        }
+        
+        /* Message animations */
+        .message-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Code block styling improvements */
+        .code-block {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        
+        .code-header {
+            background: #2d2d2d;
+            border-bottom: 1px solid #333;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+        
+        .code-content {
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #e5e5e5;
+            overflow-x: auto;
+        }
+        
+        /* Hover effects */
+        .hover-bg-gray:hover {
+            background-color: rgba(55, 65, 81, 0.5);
+        }
+        
+        /* Focus states */
+        .focus-ring:focus {
+            outline: 2px solid #10a37f;
+            outline-offset: 2px;
+        }
+        
+        /* Loading animation */
+        .loading-dots {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .loading-dots::after {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: loading-dots 1.4s infinite both;
+            margin-left: 4px;
+        }
+        
+        @keyframes loading-dots {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Root element for React app -->
+    <div id="root"></div>
+    
+    <!-- Load the chatbot script -->
+    <script type="module" src="chatbot.js"></script>
 </body>
 </html>
 
