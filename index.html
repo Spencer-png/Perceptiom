@@ -56,98 +56,66 @@
         
         /* ChatGPT-like styling */
         .chatgpt-sidebar {
-            background: #171717;
-            border-right: 1px solid #2d2d2d;
+            background: #101010;
+            border-right: 1px solid #202020;
         }
         
         .chatgpt-main {
-            background: #212121;
+            background: #151515;
         }
         
         .chatgpt-input-area {
-            background: #2f2f2f;
-            border: 1px solid #4d4d4d;
+            background: #252525;
+            border: 1px solid #353535;
             border-radius: 12px;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         
         .chatgpt-input-area:focus-within {
-            border-color: #10a37f;
-            box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
+            border-color: #0a8060;
+            box-shadow: 0 0 0 2px rgba(10, 128, 96, 0.2);
         }
         
         .chatgpt-message-user {
-            background: #2f2f2f;
+            background: #252525;
             border-radius: 18px;
         }
         
-        .chatgpt-message-ai {
-            background: transparent;
-        }
-        
         .chatgpt-button-primary {
-            background: #10a37f;
+            background: #0a8060;
             transition: background-color 0.2s;
         }
         
         .chatgpt-button-primary:hover {
-            background: #0d8f6b;
-        }
-        
-        .chatgpt-button-primary:disabled {
-            background: #4d4d4d !important;
-            cursor: not-allowed !important;
-        }
-        
-        .chatgpt-sidebar-item {
-            border-radius: 8px;
-            transition: background-color 0.2s;
+            background: #086048;
         }
         
         .chatgpt-sidebar-item:hover {
-            background: #2d2d2d;
+            background: #202020;
         }
         
         .chatgpt-sidebar-item.active {
-            background: #2d2d2d;
-        }
-        
-        /* Auto-resize textarea */
-        .auto-resize-textarea {
-            resize: none;
-            overflow: hidden;
-            min-height: 24px;
-            max-height: 200px;
-        }
-        
-        /* Message animations */
-        .message-fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            background: #202020;
         }
         
         /* Code block styling improvements */
         .code-block {
-            background: #1a1a1a;
-            border: 1px solid #333;
+            background: #0a0a0a;
+            border: 1px solid #282828;
             border-radius: 8px;
             overflow: hidden;
             margin: 12px 0;
         }
         
         .code-header {
-            background: #2d2d2d;
-            border-bottom: 1px solid #333;
+            background: #202020;
+            border-bottom: 1px solid #282828;
             padding: 8px 12px;
             display: flex;
             justify-content: between;
             align-items: center;
             font-size: 12px;
-            color: #a0a0a0;
+            color: #808080;
         }
         
         .code-content {
@@ -155,8 +123,9 @@
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 14px;
             line-height: 1.5;
-            color: #e5e5e5;
+            color: #d0d0d0;
             overflow-x: auto;
+            word-break: break-all;
         }
         
         /* Hover effects */
