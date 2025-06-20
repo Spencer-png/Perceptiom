@@ -250,11 +250,11 @@ const App = () => {
         // --- AI Response ---
         const apiKey = "AIzaSyA3Zhw-Apw21X2AI6cLQWZU7LGttcqhNlE";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. You MUST strictly adhere to the provided Perception.cx API documentation and Lua 5.4 syntax. Only provide code examples and explanations relevant to these two contexts. Do NOT provide information or code outside of Lua 5.4 or the Perception.cx API.`;
+        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. You MUST strictly adhere to the provided Perception.cx API documentation and Lua 5.4 syntax. Only provide code examples and explanations relevant to these two contexts. Do NOT provide information or code outside of Lua 5.4 or the Perception.cx API. Your response should be a single, professional, and well-formatted message. Avoid conversational filler and get straight to the point. When providing code, use Lua syntax highlighting within markdown code blocks.`;
         
         const contents = [
             { role: "user", parts: [{ text: `${systemPrompt}\n\nPerception.cx API Documentation:\n${perceptionDocContent}` }] },
-            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation provided." }] },
+            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation provided, providing only one professional response with proper formatting and no external library references." }] },
             ...updatedMessages.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }))
         ];
 
