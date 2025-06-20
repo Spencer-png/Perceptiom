@@ -19,6 +19,7 @@ const App = () => {
     const messagesEndRef = useRef(null);
     const [isReady, setIsReady] = useState(false); // Unified readiness state
     const [isDemoMode, setIsDemoMode] = useState(false);
+    const [perceptionDocContent, setPerceptionDocContent] = useState('');
 
     // Scroll to the latest message whenever messages update
     useEffect(() => {
@@ -198,8 +199,23 @@ const App = () => {
         });
     };
 
-    // This function simulates fetching documentation content.
-    const simulateFetchPerceptionDocContent = () => `## Perception.cx API Documentation Summary...`;
+    // This function now reads the content from Perception.txt
+    useEffect(() => {
+        const fetchPerceptionDoc = async () => {
+            try {
+                const response = await fetch('./Perception.txt');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                setPerceptionDocContent(text);
+            } catch (error) {
+                console.error("Could not load Perception.txt:", error);
+                setPerceptionDocContent("Error loading Perception.txt. Please ensure it's in the same directory as index.html.");
+            }
+        };
+        fetchPerceptionDoc();
+    }, []);
 
     // Handle sending a message
     const handleSendMessage = async (e) => {
@@ -232,14 +248,13 @@ const App = () => {
         }
 
         // --- AI Response ---
-        // **FIX**: Using the API key provided by the user.
         const apiKey = "AIzaSyA3Zhw-Apw21X2AI6cLQWZU7LGttcqhNlE";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API...`;
-        const perceptionDocContent = simulateFetchPerceptionDocContent();
+        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. You MUST strictly adhere to the provided Perception.cx API documentation and Lua 5.4 syntax. Only provide code examples and explanations relevant to these two contexts. Do NOT provide information or code outside of Lua 5.4 or the Perception.cx API.`;
+        
         const contents = [
-            { role: "user", parts: [{ text: `${systemPrompt}\nContext: ${perceptionDocContent}` }] },
-            { role: "model", parts: [{ text: "Understood." }] },
+            { role: "user", parts: [{ text: `${systemPrompt}\n\nPerception.cx API Documentation:\n${perceptionDocContent}` }] },
+            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation provided." }] },
             ...updatedMessages.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }))
         ];
 
@@ -437,4 +452,5 @@ if (container) {
 } else {
     console.error('Fatal Error: The root element with id "root" was not found in the DOM.');
 }
+
 
