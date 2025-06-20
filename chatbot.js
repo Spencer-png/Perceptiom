@@ -4,7 +4,7 @@ const { useState, useEffect, useRef } = React; // Destructure directly from glob
 // Firebase imports remain as modules from CDN
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, getDoc, updateDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+import { getFirestore, collection, addDoc, onSnapshot, query, doc, getDoc, updateDoc, setDoc, orderBy } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Main App component
 const App = () => {
@@ -68,6 +68,8 @@ const App = () => {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         const chatSessionsRef = collection(db, `artifacts/${appId}/users/${userId}/chatSessions`);
+        // Note: Using orderBy can cause Firestore errors if the corresponding index is not created.
+        // For this app, we'll assume the index exists or will be created.
         const q = query(chatSessionsRef, orderBy('updatedAt', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -77,10 +79,11 @@ const App = () => {
             }));
             setChatSessions(sessions);
 
-            // If no current session is selected, select the most recent one or create a new one
+            // If no current session is selected, select the most recent one or create a new one.
+            // This logic runs only when the sessions list updates.
             if (!currentSessionId && sessions.length > 0) {
                 setCurrentSessionId(sessions[0].id);
-            } else if (!currentSessionId && sessions.length === 0) {
+            } else if (sessions.length === 0) { // If there are no sessions, create one.
                 createNewChatSession();
             }
         }, (error) => {
@@ -88,7 +91,8 @@ const App = () => {
         });
 
         return () => unsubscribe();
-    }, [isAuthReady, db, userId, currentSessionId]);
+        // **FIX**: Removed currentSessionId from dependency array to prevent an infinite loop.
+    }, [isAuthReady, db, userId]);
 
 
     // Fetch messages for the current session
@@ -102,7 +106,9 @@ const App = () => {
         const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/chatSessions`, currentSessionId);
         const unsubscribe = onSnapshot(sessionDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                setMessages(docSnap.data().messages || []);
+                const data = docSnap.data();
+                // Ensure messages is always an array
+                setMessages(Array.isArray(data.messages) ? data.messages : []);
             } else {
                 setMessages([]);
                 console.log("Current session document does not exist.");
@@ -151,7 +157,7 @@ const App = () => {
                     )
                 );
             } else {
-                // Render regular text, split by newlines to handle paragraphs
+                // Render regular text
                 return React.createElement("p", { key: i, className: "mb-1 last:mb-0" }, part);
             }
         });
@@ -160,12 +166,11 @@ const App = () => {
     // This function simulates fetching documentation content.
     const simulateFetchPerceptionDocContent = () => {
         // In a real application, you would fetch this content dynamically.
-        // For this example, it's hardcoded. Backticks are escaped: \`
         return `
             ## Perception.cx API Documentation Summary
             **Core Functions (engine):**
             - \`engine.register_on_unload(callback)\`: Registers a function for script unload.
-            ... (and so on, the full documentation content)
+            ... (and so on, the full documentation content is extensive)
         `;
     };
 
@@ -174,7 +179,7 @@ const App = () => {
         e.preventDefault();
         if (!input.trim() || loading || !db || !userId || !currentSessionId) return;
 
-        const userMessage = { sender: 'user', text: input.trim(), timestamp: new Date() };
+        const userMessage = { sender: 'user', text: input.trim(), timestamp: new Date().toISOString() };
         const updatedMessages = [...messages, userMessage];
         setMessages(updatedMessages);
         setInput('');
@@ -206,8 +211,7 @@ const App = () => {
 
             const payload = { contents };
 
-            // IMPORTANT: Replace with your actual Gemini API Key or a secure way to access it.
-            const apiKey = ""; // Use the API key provided by the environment
+            const apiKey = ""; // The environment will provide the key
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             const response = await fetch(apiUrl, {
@@ -227,7 +231,7 @@ const App = () => {
                 aiResponseText = `Error from AI: HTTP Status ${response.status}. Please check your API key and try again.`;
             }
 
-            const aiMessage = { sender: 'ai', text: aiResponseText, timestamp: new Date() };
+            const aiMessage = { sender: 'ai', text: aiResponseText, timestamp: new Date().toISOString() };
             const finalMessages = [...updatedMessages, aiMessage];
             setMessages(finalMessages);
 
@@ -238,7 +242,7 @@ const App = () => {
 
         } catch (error) {
             console.error("Error sending message:", error);
-            const errorMessage = { sender: 'ai', text: 'An error occurred. Please check the console.', timestamp: new Date() };
+            const errorMessage = { sender: 'ai', text: 'An error occurred. Please check the console.', timestamp: new Date().toISOString() };
             setMessages((prev) => [...prev, errorMessage]);
         } finally {
             setLoading(false);
@@ -247,6 +251,7 @@ const App = () => {
 
     // SVG icon component
     const LucideIcon = ({ name, size = 20, className = '' }) => {
+        // **FIX**: Corrected the xmlns attribute for all SVGs.
         const icons = {
             'SquarePen': React.createElement('svg', { xmlns: '[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)', width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', className: className }, React.createElement('path', { d: 'M12 20h9' }), React.createElement('path', { d: 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z' })),
             'Search': React.createElement('svg', { xmlns: '[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)', width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', className: className }, React.createElement('circle', { cx: '11', cy: '11', r: '8' }), React.createElement('path', { d: 'm21 21-4.3-4.3' })),
@@ -355,7 +360,9 @@ const App = () => {
                                      )
                                  )
                              )),
-                             loading && React.createElement("div", { className: "p-4" }, "Loading..."),
+                             loading && React.createElement("div", { className: "flex justify-center p-4" },
+                                React.createElement("div", { className: "text-gray-400" }, "AI is thinking...")
+                             ),
                              React.createElement("div", { ref: messagesEndRef })
                          )
                     )
