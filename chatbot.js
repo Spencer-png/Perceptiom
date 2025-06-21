@@ -306,7 +306,7 @@ const App = () => {
         
         const contents = [
             { role: "user", parts: [{ text: `${systemPrompt}\n\nPerception.cx API Documentation:\n${perceptionDocContent}\n\nLua Code Examples for Learning:\n${luaExamplesContent}` }] },
-            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation and provided examples, providing only one professional response with proper formatting and no external library references but if a user wants to be able to make an external library like ffi/luajit bit HTTP and more you will make those for the user. I will ensure a concise introduction, clear code block headings, and proper Lua syntax highlighting." }] },
+            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation and provided examples, providing only one professional response with proper formatting. I will ensure a concise introduction, clear code block headings, and proper Lua syntax highlighting." }] },
             ...updatedMessages.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }))
         ];
 
