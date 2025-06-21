@@ -186,8 +186,10 @@ const App = () => {
 
     // Helper function to render message content
     const renderMessageContent = (text) => {
-        const parts = text.split(/(```(?:[a-zA-Z0-9]+)?\n[\s\S]*?\n```)/g);
+        const parts = text.split(/(```(?:[a-zA-Z0-9]+)?\n[\s\S]*?\n```)|(##\s.*)/g);
         return parts.map((part, i) => {
+            if (!part) return null; // Handle empty strings from split
+
             if (part.startsWith('```')) {
                 const codeContent = part.replace(/```(?:[a-zA-Z0-9]+)?\n|```/g, '');
                 return (
@@ -207,8 +209,8 @@ const App = () => {
                         )
                     )
                 );
-            } else if (part.startsWith('## ')) { // Handle H2 headings for code block titles
-                return React.createElement("h2", { key: i, className: "text-lg font-semibold mt-4 mb-2 text-gray-100" }, part.substring(3).trim());
+            } else if (part.startsWith('## ')) { // Handle H2 headings
+                return React.createElement("h2", { key: i, className: "text-lg font-semibold mt-4 mb-2 text-gray-100" }, part.substring(2).trim());
             }
             return React.createElement("p", { key: i, className: "mb-1 last:mb-0" }, part);
         });
@@ -302,11 +304,11 @@ const App = () => {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
         
         // Construct the system prompt with combined documentation and examples
-        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. You MUST strictly adhere to the provided Perception.cx API documentation and Lua 5.4 syntax, you can also make an external/custom lua library based on what the user wants. Only provide code examples and explanations relevant to these two contexts. Do NOT provide information or code outside of Lua 5.4 or the Perception.cx API except for making external libraries you are allowed to make those. Your response should be a single, professional, and well-formatted message. Avoid conversational filler and get straight to the point. When providing code, use Lua syntax highlighting within markdown code blocks. For code examples, provide a clear, concise heading (e.g., "## Generic Lua Watermark Example") before the code block. Ensure the overall response is clean, easy to read, and follows a structure similar to the user's provided example image, with a brief introductory sentence followed by the code block and its heading. Use the provided Lua examples to learn and improve your responses, making them more accurate and relevant to the user's needs.`;
+        const systemPrompt = `You are an AI chatbot specialized in Lua 5.4 and the Perception.cx API. You MUST strictly adhere to the provided Perception.cx API documentation and Lua 5.4 syntax. You can also create new Lua libraries. However, when providing code examples or explanations, you MUST NOT reference or use any external Lua libraries that are not explicitly part of Lua 5.4 or the Perception.cx API, unless you are defining that library within the current response. Your response should be a single, professional, and well-formatted message. Avoid conversational filler and get straight to the point. When providing code, use Lua syntax highlighting within markdown code blocks. For code examples, provide a clear, concise heading (e.g., "## Generic Lua Watermark Example") before the code block. Ensure the overall response is clean, easy to read, and follows a structure similar to the user's provided example image, with a brief introductory sentence followed by the code block and its heading. Use the provided Lua examples to learn and improve your responses, making them more accurate and relevant to the user's needs.`;
         
         const contents = [
             { role: "user", parts: [{ text: `${systemPrompt}\n\nPerception.cx API Documentation:\n${perceptionDocContent}\n\nLua Code Examples for Learning:\n${luaExamplesContent}` }] },
-            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation and provided examples, providing only one professional response with proper formatting. I will ensure a concise introduction, clear code block headings, and proper Lua syntax highlighting." }] },
+            { role: "model", parts: [{ text: "Understood. I will strictly adhere to Lua 5.4 and the Perception.cx API documentation and provided examples, providing only one professional response with proper formatting and no external library references. I will ensure a concise introduction, clear code block headings, and proper Lua syntax highlighting." }] },
             ...updatedMessages.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }))
         ];
 
@@ -521,7 +523,7 @@ const App = () => {
                     React.createElement("button", { type: "button", className: "p-2 text-gray-400 hover:text-white ml-2" },
                         React.createElement(LucideIcon, { name: "Mic", size: 24 })
                     ),
-                    React.createElement("button", { type: "submit", className: `p-2 rounded-lg ml-2 ${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`,
+                    React.createElement("button", { type: "submit", className: `p-2 rounded-lg ml-2 ${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`, 
                         disabled: loading
                     },
                         React.createElement(LucideIcon, { name: "SendHorizonal", size: 24, className: "text-white" })
